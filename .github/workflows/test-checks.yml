@@ -17,6 +17,9 @@ jobs:
     - name: Setup uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: /
+        uv sync
     - name: Lint with ruff base task rules
       run: |
         # Stop the build if there are Python syntax errors
@@ -34,6 +37,9 @@ jobs:
     - name: Setup uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: /
+        uv sync
     - name: Lint with ruff base task rules
       run: |
         # Run the strictest ruff checks possible to satisfy EVERYTHING
@@ -50,6 +56,9 @@ jobs:
     - name: Setup uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: /
+        uv sync
     - name: Lint with ruff base task rules
       run: |
         # Run check for formatting
@@ -65,6 +74,9 @@ jobs:
     - name: Setup uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: /
+        uv sync
     - name: Lint with ruff base task rules
       run: |
         # Stop the build if there are Python syntax errors
