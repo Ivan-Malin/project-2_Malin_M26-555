@@ -18,7 +18,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
     - name: Install dependencies
-      run: /
+      run: |
         uv sync
     - name: Lint with ruff base task rules
       run: |
@@ -38,7 +38,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
     - name: Install dependencies
-      run: /
+      run: |
         uv sync
     - name: Lint with ruff base task rules
       run: |
@@ -57,7 +57,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
     - name: Install dependencies
-      run: /
+      run: |
         uv sync
     - name: Lint with ruff base task rules
       run: |
@@ -75,7 +75,7 @@ jobs:
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
     - name: Install dependencies
-      run: /
+      run: |
         uv sync
     - name: Lint with ruff base task rules
       run: |
