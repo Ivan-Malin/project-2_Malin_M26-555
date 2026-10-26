@@ -1,0 +1,94 @@
+# Проводит все необходимые проверки по ТЗ и по правилам линтера
+
+name: Run all repo checks
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v6
+    - name: Setup uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: |
+        uv sync
+    - name: Lint with ruff base task rules
+      run: |
+        # Stop the build if there are Python syntax errors
+        uv run ruff check .
+    - name: Test repo on unit tests
+      run: |
+        uv run pytest
+
+  lint-strict-dev-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v6
+    - name: Setup uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: |
+        uv sync
+    - name: Lint with ruff base task rules
+      run: |
+        # Run the strictest ruff checks possible to satisfy EVERYTHING
+        uv run ruff check --select ALL --ignore T201,CPY001,RUF001,RUF002,RUF003 ./src
+        # Also run non-strict checks for the tests
+        uv run ruff check ./tests
+  
+  format-strict-dev-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v6
+    - name: Setup uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: |
+        uv sync
+    - name: Lint with ruff base task rules
+      run: |
+        # Run check for formatting
+        uv run ruff format --check
+
+  # Run all complience checks
+  compliance-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v6
+    - name: Setup uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Install dependencies
+      run: |
+        uv sync
+    - name: Lint with ruff base task rules
+      run: |
+        # Stop the build if there are Python syntax errors
+        uv run ruff check .
+    - name: Test repo on project building
+      run: |
+        # Build project
+        uv build
+        # Check built project
+        uvx twine check dist/*
+        # Source venv and install *.whl
+        source .venv/bin/activate
+        uv tool install dist/*.whl
+        # Test if project is in the system
+        which project
