@@ -12,7 +12,7 @@ def is_columns_propper(columns: list[tuple[str, type]]) -> bool:
     """Проверяет является ли columns списком колонок таблицы.
 
     Args:
-        columns (List[Tuple[str, type]]): _description_
+        columns (List[Tuple[str, type]]): колонки таблицы
 
     Returns:
         bool: является ли columns списком колонок таблицы.
@@ -32,7 +32,9 @@ def is_columns_propper(columns: list[tuple[str, type]]) -> bool:
 
 
 def create_table(
-    metadata: dict, table_name: str, columns: list[tuple[str, type]],
+    metadata: dict,
+    table_name: str,
+    columns: list[tuple[str, type]],
 ) -> dict:
     """Создаёт таблицу в хранилище с метаданными metadata.
 
