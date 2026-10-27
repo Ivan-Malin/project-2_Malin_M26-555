@@ -7,12 +7,14 @@ from collections.abc import Sequence
 # сделает это корректнее и быстрее
 from copy import deepcopy
 
+COLUMN_TYPES = ("str", "int", "bool")
 
-def is_columns_propper(columns: list[tuple[str, type]]) -> bool:
+
+def is_columns_propper(columns: list[tuple[str, str]]) -> bool:
     """Проверяет является ли columns списком колонок таблицы.
 
     Args:
-        columns (List[Tuple[str, type]]): колонки таблицы
+        columns (List[Tuple[str, str]]): колонки таблицы
 
     Returns:
         bool: является ли columns списком колонок таблицы.
@@ -26,9 +28,29 @@ def is_columns_propper(columns: list[tuple[str, type]]) -> bool:
         isinstance(item, (list, tuple))
         and len(item) == len(("имя", type))
         and isinstance(item[0], str)
-        and item[1] in (str, int, bool)
+        and item[1] in COLUMN_TYPES
         for item in columns
     )
+
+
+def parse_column_str(column_str: str) -> tuple[str, str]:
+    """Возвращает колонку из её строкового представления.
+
+    Args:
+        column_str (str): строковое представление колонки.
+
+    Returns:
+        tuple[str, str]: колонка
+
+    """
+    column_name, column_type = column_str.split(":")
+    if column_type not in COLUMN_TYPES:
+        msg = f"Неправильный тип колонки: {column_type}, не один из {COLUMN_TYPES}"
+        raise TypeError(
+            msg,
+        )
+
+    return (column_name, column_type)
 
 
 def create_table(
@@ -41,9 +63,9 @@ def create_table(
     Args:
         metadata (dict): метаданные хранилища таблиц
         table_name (str): название таблицы
-        columns (List[Tuple[str, type]]): упорядоченный список столбцов
-            формата ("название", тип_столбца). тип_столбца один из
-            int, str, bool
+        columns (List[Tuple[str, str]]): упорядоченный список столбцов
+            формата ("название", "тип_столбца"). тип_столбца один из
+            COLUMN_TYPES
 
     Raises:
         TypeError: В случае некорректных аргументов
@@ -66,8 +88,18 @@ def create_table(
     if "tables" not in _metadata:
         _metadata["tables"] = {}
 
-    _columns = [("ID", int)]
-    _columns.extend(deepcopy(columns))
+    # Проверяем наличие ID
+    columns_have_id = any(c[0] == "ID" for c in columns)
+    if not columns_have_id:
+        _columns = [("ID", "int")]
+        _columns.extend(deepcopy(columns))
+    else:
+        _columns = deepcopy(columns)
+
+    if table_name in _metadata["tables"]:
+        msg = f"Таблица '{table_name}' уже существует."
+        raise ValueError(msg)
+
     _metadata["tables"][table_name] = {
         "columns": _columns,
     }

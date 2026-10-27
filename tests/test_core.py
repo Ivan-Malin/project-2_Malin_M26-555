@@ -8,16 +8,16 @@ def test_create_table():
     metadata = {}
     table_name = "лекарства"
     columns = [
-        ("название", str),
-        ("описание", str),
-        ("мин_возраст", int),
-        ("можно_принимать_беременным", bool),
+        ("название", "str"),
+        ("описание", "str"),
+        ("мин_возраст", "int"),
+        ("можно_принимать_беременным", "bool"),
     ]
 
     propper_metadata = deepcopy(metadata)
     propper_table_name = deepcopy(table_name)
     propper_columns = deepcopy(columns)
-    c = [("ID", int)]
+    c = [("ID", "int")]
     c.extend(columns)
     propper_new_metadata = {
         "tables": {
@@ -42,13 +42,13 @@ def test_create_table():
     metadata = new_metadata
     table_name = "аптеки"
     columns = [
-        ("название", str),
-        ("владелец", str),
-        ("количество_сотрудников", int),
-        ("работает", bool),
+        ("название", "str"),
+        ("владелец", "str"),
+        ("количество_сотрудников", "int"),
+        ("работает", "bool"),
+        ("ID", "int"),
     ]
-    c = [("ID", int)]
-    c.extend(columns)
+    c = columns
     propper_new_metadata["tables"] |= {
         table_name: {
             "columns": c,
@@ -66,7 +66,7 @@ def test_create_table():
 def test_create_table_wrong_inputs():
     got_type_error_fl = False
     try:
-        create_table({}, 12345, [("название", str)])
+        create_table({}, 12345, [("название", "str")])
     except TypeError:
         got_type_error_fl = True
     assert got_type_error_fl, (
@@ -107,20 +107,20 @@ def test_drop_table():
         "tables": {
             "лекарства": {
                 "columns": [
-                    ("ID", int),
-                    ("название", str),
-                    ("описание", str),
-                    ("мин_возраст", int),
-                    ("можно_принимать_беременным", bool),
+                    ("ID", "int"),
+                    ("название", "str"),
+                    ("описание", "str"),
+                    ("мин_возраст", "int"),
+                    ("можно_принимать_беременным", "bool"),
                 ]
             },
             "аптеки": {
                 "columns": [
-                    ("ID", int),
-                    ("название", str),
-                    ("владелец", str),
-                    ("количество_сотрудников", int),
-                    ("работает", bool),
+                    ("ID", "int"),
+                    ("название", "str"),
+                    ("владелец", "str"),
+                    ("количество_сотрудников", "int"),
+                    ("работает", "bool"),
                 ]
             },
         }
@@ -131,11 +131,11 @@ def test_drop_table():
         "tables": {
             "лекарства": {
                 "columns": [
-                    ("ID", int),
-                    ("название", str),
-                    ("описание", str),
-                    ("мин_возраст", int),
-                    ("можно_принимать_беременным", bool),
+                    ("ID", "int"),
+                    ("название", "str"),
+                    ("описание", "str"),
+                    ("мин_возраст", "int"),
+                    ("можно_принимать_беременным", "bool"),
                 ]
             }
         }

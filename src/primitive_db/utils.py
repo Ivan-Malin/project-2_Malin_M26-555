@@ -1,6 +1,7 @@
 """Содержит вспомогательные функции (такие как работа с файлами)."""
 
 import json
+import os
 
 
 def load_metadata(filepath: str) -> dict:
@@ -37,9 +38,20 @@ def save_metadata(filepath: str, data: dict) -> None:
         msg = "Некорректный тип входных данных"
         raise TypeError(msg)
 
-    # Все ошибки, связанные с открытием файла,
-    # пробрасываем дальше
+    # Все ошибки, связанные с json, пробрасываем дальше.
+    # json парсится до открытия файла из-за того, что "w"
+    # режим перезатирает файл сразу после открытия
+    result = json.dumps(data, ensure_ascii=False)
+    # Все ошибки, связанные с открытием файла, пробрасываем дальше
     with open(filepath, "w") as f:
-        f.write(
-            json.dumps(data, ensure_ascii=False),
-        )
+        f.write(result)
+
+
+def get_current_path() -> str:
+    """Возвращает текущий рабочий путь.
+
+    Returns:
+        str: путь
+
+    """
+    return os.path.dirname(__file__)
