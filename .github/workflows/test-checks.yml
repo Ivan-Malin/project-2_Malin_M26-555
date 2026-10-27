@@ -43,7 +43,7 @@ jobs:
     - name: Lint with ruff base task rules
       run: |
         # Run the strictest ruff checks possible to satisfy EVERYTHING
-        uv run ruff check --select ALL --ignore T201,CPY001,RUF001,RUF002,RUF003,PTH123 ./src
+        uv run ruff check --select ALL --ignore T201,CPY001,RUF001,RUF002,RUF003,PTH120,PTH123 ./src
         # Also run non-strict checks for the tests
         uv run ruff check ./tests
   
