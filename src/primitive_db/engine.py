@@ -25,21 +25,17 @@ def print_help() -> None:
 
 def print_user_input_error() -> None:
     """Пишет ошибку о некорректном вводе для пользователя."""
-    print("\n")
-    print("------------------------------------------")
     print("Некорректный ввод. Повторите свою команду.")
-    print("------------------------------------------")
+    print("\n")
 
 
 def print_no_command() -> None:
     """Пишет ошибку об отсутствии команды для пользователя."""
+    print("Ошибка. Команда не реализована.")
     print("\n")
-    print("------------------------------------------")
-    print("Команда не реализована.")
-    print("------------------------------------------")
 
 
-def print_bad_args(err: str = "") -> None:
+def print_err(err: str = "") -> None:
     """Пишет ошибку о неправильных аргументах для пользователя.
 
     Args:
@@ -50,10 +46,8 @@ def print_bad_args(err: str = "") -> None:
     if err:
         err_str = f"Ошибка: {err}"
 
-    print("\n")
-    print("------------------------------------------")
     print(f"Неправильно заданы аргументы команды. {err_str}")
-    print("------------------------------------------")
+    print("\n")
 
 
 def print_success(result: str = "") -> None:
@@ -63,12 +57,10 @@ def print_success(result: str = "") -> None:
         result (str, optional): результат выполнения. По умолчанию "".
 
     """
-    print("\n")
-    print("------------------------------------------")
-    print("Команда успешно выполнена.")
+    print("Успех. ", end="")
     if result:
         print(f"{result}")
-    print("------------------------------------------")
+    print("\n")
 
 
 def get_user_command_line() -> str:
@@ -78,8 +70,7 @@ def get_user_command_line() -> str:
         str: название команды
 
     """
-    print_help()
-    return prompt.string("Введите команду: ")
+    return prompt.string(">>> Введите команду: ")
 
 
 def get_and_parse_user_args() -> str:
@@ -110,6 +101,7 @@ def get_and_parse_user_args() -> str:
 
 def run() -> None:
     """Основной цикл программы."""
+    print_help()
     while True:
         # Загружаем таблицы
         metadata = load_metadata(TABLES_METADATA_PATH)
@@ -124,7 +116,7 @@ def run() -> None:
                 try:
                     table_name = command_args[1]
                 except IndexError:
-                    print_bad_args("Недостаточно аргмуентов")
+                    print_err("Недостаточно аргмуентов")
                     continue
 
                 try:
@@ -132,13 +124,13 @@ def run() -> None:
                         parse_column_str(column_str) for column_str in command_args[2:]
                     ]
                 except (IndexError, KeyError, ValueError, TypeError) as err:
-                    print_bad_args(err)
+                    print_err(err)
                     continue
 
                 try:
                     metadata = create_table(metadata, table_name, columns)
                 except (TypeError, ValueError) as err:
-                    print_bad_args(err)
+                    print_err(err)
                     continue
 
                 save_metadata(TABLES_METADATA_PATH, metadata)
@@ -147,16 +139,20 @@ def run() -> None:
                 try:
                     table_name = command_args[1]
                 except IndexError:
-                    print_bad_args("Недостаточно аргмуентов")
+                    print_err("Недостаточно аргмуентов")
                     continue
 
                 try:
                     metadata = drop_table(metadata, table_name)
                 except KeyError as err:
-                    print_bad_args(err)
+                    print_err(err)
                     continue
 
                 save_metadata(TABLES_METADATA_PATH, metadata)
                 print_success(f"Таблица '{table_name}' успешно удалена")
+            case "help":
+                print_help()
+            case "exit":
+                break
             case _:
                 print_no_command()
