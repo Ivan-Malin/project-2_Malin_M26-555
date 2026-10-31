@@ -1,6 +1,7 @@
-"""Содержит запуск, игровой цикл и парсинг команд."""
+"""Содержит основной цикл проекта по работе с базой данных."""
 
 import shlex
+from collections.abc import Sequence
 
 import prompt
 
@@ -99,13 +100,76 @@ def get_and_parse_user_args() -> str:
     return command_args
 
 
+def create_table_by_args(command_args: list) -> None:
+    """Создаёт таблицу по аргументам от пользователя.
+
+    Args:
+        command_args (list): пользовательский ввод
+
+    """
+    if not isinstance(command_args, Sequence):
+        msg = "command_args не является списком аргументов"
+        raise TypeError(msg)
+
+    # Загружаем БД
+    metadata = load_metadata(TABLES_METADATA_PATH)
+
+    try:
+        table_name = command_args[1]
+    except IndexError:
+        print_err("Недостаточно аргмуентов")
+        return
+
+    try:
+        columns = [parse_column_str(column_str) for column_str in command_args[2:]]
+    except (IndexError, KeyError, ValueError, TypeError) as err:
+        print_err(err)
+        return
+
+    try:
+        metadata = create_table(metadata, table_name, columns)
+    except (TypeError, ValueError) as err:
+        print_err(err)
+        return
+
+    save_metadata(TABLES_METADATA_PATH, metadata)
+    print_success(f"Таблица '{table_name}' успешно создана")
+
+
+def drop_table_by_args(command_args: list) -> None:
+    """Удаляет таблицу по аргументам от пользователя.
+
+    Args:
+        command_args (list): пользовательский ввод
+
+    """
+    if not isinstance(command_args, Sequence):
+        msg = "command_args не является списком аргументов"
+        raise TypeError(msg)
+
+    # Загружаем БД
+    metadata = load_metadata(TABLES_METADATA_PATH)
+
+    try:
+        table_name = command_args[1]
+    except IndexError:
+        print_err("Недостаточно аргмуентов")
+        return
+
+    try:
+        metadata = drop_table(metadata, table_name)
+    except KeyError as err:
+        print_err(err)
+        return
+
+    save_metadata(TABLES_METADATA_PATH, metadata)
+    print_success(f"Таблица '{table_name}' успешно удалена")
+
+
 def run() -> None:
     """Основной цикл программы."""
     print_help()
     while True:
-        # Загружаем таблицы
-        metadata = load_metadata(TABLES_METADATA_PATH)
-
         # Получаем ввод от пользователя
         command_args = get_and_parse_user_args()
 
@@ -113,43 +177,9 @@ def run() -> None:
 
         match command_name:
             case "create_table":
-                try:
-                    table_name = command_args[1]
-                except IndexError:
-                    print_err("Недостаточно аргмуентов")
-                    continue
-
-                try:
-                    columns = [
-                        parse_column_str(column_str) for column_str in command_args[2:]
-                    ]
-                except (IndexError, KeyError, ValueError, TypeError) as err:
-                    print_err(err)
-                    continue
-
-                try:
-                    metadata = create_table(metadata, table_name, columns)
-                except (TypeError, ValueError) as err:
-                    print_err(err)
-                    continue
-
-                save_metadata(TABLES_METADATA_PATH, metadata)
-                print_success(f"Таблица '{table_name}' успешно создана")
+                create_table_by_args(command_args)
             case "drop_table":
-                try:
-                    table_name = command_args[1]
-                except IndexError:
-                    print_err("Недостаточно аргмуентов")
-                    continue
-
-                try:
-                    metadata = drop_table(metadata, table_name)
-                except KeyError as err:
-                    print_err(err)
-                    continue
-
-                save_metadata(TABLES_METADATA_PATH, metadata)
-                print_success(f"Таблица '{table_name}' успешно удалена")
+                drop_table_by_args(command_args)
             case "help":
                 print_help()
             case "exit":

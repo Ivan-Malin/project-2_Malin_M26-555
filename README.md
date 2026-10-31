@@ -56,7 +56,7 @@ $ database
 >>> Введите команду: exit
 ```
 
-**Установка проекта**
+## Установка проекта
 Для установки возьмите файлы *.whl из ![релиза](https://github.com/Ivan-Malin/project-2_Malin_M26-555/releases) и установите через
 ```
 uv tool install dist/*.whl
