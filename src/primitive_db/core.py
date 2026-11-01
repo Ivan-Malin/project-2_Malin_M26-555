@@ -12,7 +12,7 @@
 #   что стоят непомерно дорого...
 # - исполнителем было принято решение строго следовать ТЗ
 #   и сделать (т.к. это логически для данных формулировок
-#   более корректно) аргументы функции неизменными
+#   более корректно) аргументы функции неизменяемыми
 
 # Копирование можно было расписать вручную, но deepcopy
 # сделает это корректнее и быстрее
@@ -23,7 +23,7 @@ from primitive_db.constants import COLUMN_TYPES, DATA_PATH
 from primitive_db.errors import TableAlreadyExistsError
 from primitive_db.tables import Table, is_columns_propper
 from primitive_db.utils import (
-    CopyPolitics,
+    CopyPolicy,
     get_table_path,
     is_table_structure_free,
 )
@@ -102,6 +102,7 @@ def create_table(
     table_path = get_table_path(table_name, data_path)
 
     _metadata["tables"][table_name] = {"columns": _columns, "path": table_path}
+    Table.save_table_by_metadata(_metadata, Table(table_name, _columns), data_path)
 
     return _metadata
 
@@ -172,7 +173,7 @@ def select(table_data: Table, where_clause: dict[str, Any] | None = None) -> lis
         list[dict]: Записи таблицы
 
     """
-    return table_data.select(where_clause, do_copy=CopyPolitics.DO_COPY)
+    return table_data.select(where_clause, do_copy=CopyPolicy.DO_COPY)
 
 
 def update(

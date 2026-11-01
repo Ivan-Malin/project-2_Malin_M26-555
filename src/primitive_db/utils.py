@@ -9,11 +9,18 @@ from typing import Any
 from primitive_db.constants import DATA_PATH, DEFAULT_METADATA_CONTENT
 
 
-class CopyPolitics(Enum):
+class CopyPolicy(Enum):
     """Политика копирования элементов таблицы."""
 
     DO_NOT_COPY = 1
     DO_COPY = 2
+
+
+class OverwritePolicy(Enum):
+    """Политика перезаписи элементов таблицы."""
+
+    DO_NOT_OVERWRITE = 1
+    DO_OVERWRITE = 2
 
 
 def load_metadata(filepath: str) -> dict:
@@ -67,12 +74,13 @@ def save_metadata(filepath: str, data: dict) -> None:
 # так намного более практично
 
 
-def is_table_data_exist(table_name: str, data_path: str) -> bool:
+def is_table_data_exist(table_name: str, data_path: str = DATA_PATH) -> bool:
     """Проверяет, существуют ли данные таблицы в БД.
 
     Args:
         table_name (str): название таблицы
-        data_path (str): путь до папки с данными БД
+        data_path (str): путь до папки с данными БД.
+            По умолчанию берёт папку data проекта primitive_db.
 
     Returns:
         bool: результат проверки
@@ -139,7 +147,7 @@ def get_table_path(table_name: str, data_path: str = DATA_PATH) -> str:
         str: путь до таблицы
 
     """
-    return str(Path(data_path) / Path(table_name))
+    return str(Path(data_path) / Path(table_name + ".json"))
 
 
 def create_database_structure_if_none(metadata_path: str) -> None:

@@ -6,8 +6,16 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from primitive_db.constants import COLUMN_TYPES
-from primitive_db.utils import CopyPolitics, prepare_full_path, validate_value
+from primitive_db.constants import COLUMN_TYPES, DATA_PATH
+from primitive_db.errors import TableIsMissingError
+from primitive_db.utils import (
+    CopyPolicy,
+    OverwritePolicy,
+    is_table_data_exist,
+    is_table_exist,
+    prepare_full_path,
+    validate_value,
+)
 
 
 def is_columns_propper(columns: list[tuple[str, str]]) -> bool:
@@ -70,7 +78,7 @@ class Table:
         name: str,
         columns: list[tuple],
         data: list[dict] | None = None,
-        do_copy: CopyPolitics = CopyPolitics.DO_NOT_COPY,
+        do_copy: CopyPolicy = CopyPolicy.DO_NOT_COPY,
     ) -> None:
         """Инициализирует объект таблицы.
 
@@ -82,7 +90,7 @@ class Table:
                 если его нет.
             data (list[dict]): Список словарей с данными.
                 Если None, создается пустая таблица.
-            do_copy (CopyPolitics): Копировать ли входные данные, или ссылаться на них.
+            do_copy (CopyPolicy): Копировать ли входные данные, или ссылаться на них.
 
         Raises:
             ValueError: Если схема некорректна.
@@ -104,7 +112,7 @@ class Table:
         data_processed = data if data is not None else []
 
         self.copy = do_copy
-        if do_copy == CopyPolitics.DO_COPY:
+        if do_copy == CopyPolicy.DO_COPY:
             self.columns = deepcopy(columns)
             self.name = deepcopy(name)
             self.data = deepcopy(data_processed)
@@ -202,21 +210,21 @@ class Table:
     def select(
         self,
         where_clause: dict[str, Any] | None = None,
-        do_copy: CopyPolitics = CopyPolitics.DO_COPY,
+        do_copy: CopyPolicy = CopyPolicy.DO_COPY,
     ) -> list[dict]:
         """Выбирает записи из таблицы.
 
         Args:
             where_clause: Словарь условий {column: value}.
                 Если None, возвращает все записи.
-            do_copy (CopyPolitics): Копировать ли входные данные, или ссылаться на них.
+            do_copy (CopyPolicy): Копировать ли входные данные, или ссылаться на них.
 
         Returns:
             list[dict]: Список подходящих записей.
 
         """
         if not where_clause:
-            if do_copy == CopyPolitics.DO_COPY:
+            if do_copy == CopyPolicy.DO_COPY:
                 return [deepcopy(_record) for _record in self.data]
             return self.data
 
@@ -227,7 +235,7 @@ class Table:
         results = []
         for _record in self.data:
             if self._is_where_passed(_record, where_clause):
-                if do_copy == CopyPolitics.DO_COPY:
+                if do_copy == CopyPolicy.DO_COPY:
                     results.append(deepcopy(_record))
                 else:
                     results.append(_record)
@@ -341,6 +349,70 @@ class Table:
         )
 
     @classmethod
+    def load_table_by_metadata(
+        cls,
+        metadata: dict,
+        table_name: str,
+        data_path: str = DATA_PATH,
+    ) -> "Table":
+        """Зашружает таблицу на основе metadata.
+
+        Args:
+            metadata (dict): метаданные хранилища таблиц
+            table_name (str): название таблицы
+            data_path (str): путь до папки с данными БД.
+                По умолчанию берёт папку data проекта primitive_db.
+
+        Returns:
+            Table: загруженная таблица
+
+        """
+        if not is_table_exist(
+            metadata,
+            table_name,
+            data_path,
+        ) or not is_table_data_exist(table_name, data_path):
+            msg = f"Таблица {table_name} не существует в БД."
+            raise TableIsMissingError(msg)
+
+        columns = metadata["tables"][table_name]["columns"]
+        table_path = metadata["tables"][table_name]["path"]
+        return cls.load_table(table_path, table_name, columns)
+
+    @classmethod
+    def save_table_by_metadata(
+        cls,
+        metadata: dict,
+        table: "Table",
+        overwrite: OverwritePolicy = OverwritePolicy.DO_NOT_OVERWRITE,
+        data_path: str = DATA_PATH,
+    ) -> None:
+        """Сохраняет таблицу на основе metadata.
+
+        Args:
+            metadata (dict): метаданные хранилища таблиц
+            table (Table): исходная таблица
+            overwrite (OverwritePolicy): политика перезаписи
+            data_path (str): путь до папки с данными БД.
+                По умолчанию берёт папку data проекта primitive_db.
+
+        """
+        table_name = table.name
+        if not is_table_exist(metadata, table_name, data_path):
+            msg = f"Таблица {table_name} не определена в metadata."
+            raise TableIsMissingError(msg)
+
+        if (
+            is_table_data_exist(table_name, data_path)
+            and overwrite == OverwritePolicy.DO_NOT_OVERWRITE
+        ):
+            msg = f"Таблица {table_name} уже существует в БД."
+            raise TableIsMissingError(msg)
+
+        table_path = metadata["tables"][table_name]["path"]
+        cls.save_table(table, table_path)
+
+    @classmethod
     def load_table(
         cls,
         file_path: str,
@@ -362,7 +434,7 @@ class Table:
                 COLUMN_TYPES.
 
         Returns:
-            Экземпляр класса Table.
+            Table: загруженная таблица
 
         Raises:
             FileNotFoundError: Если файл не найден.

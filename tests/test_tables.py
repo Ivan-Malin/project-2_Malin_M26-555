@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
+from primitive_db.core import create_table
 from primitive_db.tables import Table, does_columns_have_id, is_columns_propper
-from primitive_db.utils import CopyPolitics
+from primitive_db.utils import CopyPolicy
 
 # Замечание проверяющему - часть тестовых файлов были отданы на откуп Qwen'у,
 # т.к. тесты от нейросети (под пристальным ревью) лучше, чем никаких тестов вообще.
@@ -91,7 +92,7 @@ def test_table_init_copy_policy_do_copy():
         name="users",
         columns=original_columns,
         data=original_data,
-        do_copy=CopyPolitics.DO_COPY,
+        do_copy=CopyPolicy.DO_COPY,
     )
 
     # Изменяем исходные данные
@@ -111,7 +112,7 @@ def test_table_init_copy_policy_do_not_copy():
         name="users",
         columns=[("ID", "int"), ("name", "str")],
         data=original_data,
-        do_copy=CopyPolitics.DO_NOT_COPY,
+        do_copy=CopyPolicy.DO_NOT_COPY,
     )
 
     # Изменяем исходные данные
@@ -256,7 +257,7 @@ def test_select_copy_policy_do_copy():
     table = Table(name="users", columns=[("ID", "int"), ("name", "str")])
     table.insert(["Alice"])
 
-    results = table.select(do_copy=CopyPolitics.DO_COPY)
+    results = table.select(do_copy=CopyPolicy.DO_COPY)
     results[0]["name"] = "Modified"
 
     assert table.data[0]["name"] == "Alice"
@@ -267,7 +268,7 @@ def test_select_copy_policy_do_not_copy():
     table = Table(name="users", columns=[("ID", "int"), ("name", "str")])
     table.insert(["Alice"])
 
-    results = table.select(do_copy=CopyPolitics.DO_NOT_COPY)
+    results = table.select(do_copy=CopyPolicy.DO_NOT_COPY)
 
     # Изменяем результат
     results[0]["name"] = "Modified"
@@ -469,3 +470,92 @@ def test_repr():
     assert "Table" in repr_str
     assert "users" in repr_str
     assert "records_count=1" in repr_str
+
+
+def _setup_metadata_and_table(tmp_path: Path, table_name: str = "users"):
+    """
+    Корректно создает таблицу через core.create_table
+    и сохраняет её начальный файл данных.
+    Возвращает актуальные метаданные и путь к папке data.
+    """
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+
+    # Начальные пустые метаданные
+    metadata = {}
+    columns = [("name", "str"), ("age", "int")]
+
+    # Используем официальную функцию создания из core.py
+    # Она сама добавит ID, проверит структуру и вернет обновленный metadata с путем
+    metadata = create_table(metadata, table_name, columns, data_path=str(data_dir))
+
+    # Теперь создадим физический файл данных для этой таблицы,
+    # используя путь из metadata
+    table_path = metadata["tables"][table_name]["path"]
+    initial_table = Table(
+        name=table_name, columns=metadata["tables"][table_name]["columns"]
+    )
+    Table.save_table(initial_table, table_path)
+
+    return metadata, str(data_dir)
+
+
+def test_load_table_by_metadata_success(tmp_path: Path):
+    """Тест успешной загрузки таблицы по метаданным."""
+    metadata, data_path = _setup_metadata_and_table(tmp_path)
+
+    # Проверяем, что файл действительно создан по пути из метаданных
+    assert Path(metadata["tables"]["users"]["path"]).exists()
+
+    table = Table.load_table_by_metadata(metadata, "users", data_path)
+
+    assert table.name == "users"
+    assert len(table.columns) == 3  # ID + name + age
+    assert isinstance(table, Table)
+
+
+def test_load_table_by_metadata_missing_table():
+    """Тест ошибки при загрузке несуществующей таблицы."""
+    metadata = {"tables": {}}
+
+    with pytest.raises(Exception):  # TableIsMissingError
+        Table.load_table_by_metadata(metadata, "nonexistent", "/tmp")
+
+
+def test_load_table_by_metadata_missing_data_file(tmp_path: Path):
+    """Тест ошибки если файл данных удален, но есть в метаданных."""
+    metadata, data_path = _setup_metadata_and_table(tmp_path)
+
+    # Удаляем файл данных, симулируя повреждение БД
+    file_path = Path(metadata["tables"]["users"]["path"])
+    if file_path.exists():
+        file_path.unlink()
+
+    with pytest.raises(Exception):  # TableIsMissingError
+        Table.load_table_by_metadata(metadata, "users", data_path)
+
+
+def test_save_table_by_metadata_success(tmp_path: Path):
+    """Тест успешного сохранения таблицы по метаданным."""
+    metadata, data_path = _setup_metadata_and_table(tmp_path)
+
+    # Загружаем таблицу, меняем её и сохраняем обратно
+    table = Table.load_table_by_metadata(metadata, "users", data_path)
+    table.insert(["Bob", 25])
+
+    Table.save_table_by_metadata(metadata, table, data_path)
+
+    # Проверяем файл напрямую через повторную загрузку
+    loaded_check = Table.load_table_by_metadata(metadata, "users", data_path)
+    assert len(loaded_check.data) == 1
+    assert loaded_check.data[0]["name"] == "Bob"
+    assert loaded_check.data[0]["age"] == 25
+
+
+def test_save_table_by_metadata_missing_table():
+    """Тест ошибки сохранения несуществующей таблицы."""
+    metadata = {"tables": {}}
+    table = Table(name="fake", columns=[("ID", "int"), ("val", "str")])
+
+    with pytest.raises(Exception):  # TableIsMissingError
+        Table.save_table_by_metadata(metadata, table, "/tmp")
