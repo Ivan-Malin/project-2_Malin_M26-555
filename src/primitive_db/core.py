@@ -7,7 +7,7 @@ from collections.abc import Sequence
 # сделает это корректнее и быстрее
 from copy import deepcopy
 
-COLUMN_TYPES = ("str", "int", "bool")
+from primitive_db.constants import COLUMN_TYPES
 
 
 def is_columns_propper(columns: list[tuple[str, str]]) -> bool:

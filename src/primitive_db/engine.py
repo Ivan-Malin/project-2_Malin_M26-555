@@ -5,10 +5,9 @@ from collections.abc import Sequence
 
 import prompt
 
+from primitive_db.constants import TABLES_METADATA_PATH
 from primitive_db.core import create_table, drop_table, parse_column_str
-from primitive_db.utils import get_current_path, load_metadata, save_metadata
-
-TABLES_METADATA_PATH = f"{get_current_path()}/db_meta.json"
+from primitive_db.utils import load_metadata, save_metadata
 
 
 def print_help() -> None:
