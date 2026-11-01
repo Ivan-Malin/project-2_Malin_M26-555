@@ -1,10 +1,11 @@
 """Модуль с константами проекта."""
 
-from primitive_db.utils import get_current_path
+import os
 
-COLUMN_TYPES = ("str", "int", "bool")
+COLUMN_TYPES = {"str", "int", "bool"}
 
-TABLES_METADATA_PATH = f"{get_current_path()}/../../data/db_meta.json"
+DATA_PATH = f"{os.path.dirname(__file__)}/../../data"
+TABLES_METADATA_PATH = f"{DATA_PATH}/db_meta.json"
 DEFAULT_METADATA_CONTENT = {"tables": {}}
 
 HELP_TEXT = """

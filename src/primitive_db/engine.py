@@ -7,11 +7,12 @@ import prompt
 
 from primitive_db.constants import HELP_TEXT, TABLES_METADATA_PATH
 from primitive_db.core import (
+    create_database_structure_if_none,
     create_table,
-    create_tables_structure_if_none,
     drop_table,
     parse_column_str,
 )
+from primitive_db.errors import TableAlreadyExistsError
 from primitive_db.utils import load_metadata, save_metadata
 
 
@@ -124,7 +125,7 @@ def create_table_by_args(command_args: list) -> None:
 
     try:
         metadata = create_table(metadata, table_name, columns)
-    except (TypeError, ValueError) as err:
+    except (TypeError, ValueError, TableAlreadyExistsError) as err:
         print_err(err)
         return
 
@@ -167,7 +168,7 @@ def run() -> None:
     print_help()
 
     # Подготавливаем директорию целевую директорию под БД
-    create_tables_structure_if_none(TABLES_METADATA_PATH)
+    create_database_structure_if_none(TABLES_METADATA_PATH)
 
     while True:
         # Получаем ввод от пользователя
