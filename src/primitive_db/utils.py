@@ -47,6 +47,18 @@ def save_metadata(filepath: str, data: dict) -> None:
         f.write(result)
 
 
+def prepare_full_path(filepath: str) -> None:
+    """Создаёт полный путь до файла, включая подпапки, но не включая сам файл.
+
+    Args:
+        filepath (str): полный путь до файла
+
+    """
+    directory = os.path.dirname(filepath)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+
 def get_current_path() -> str:
     """Возвращает текущий рабочий путь.
 

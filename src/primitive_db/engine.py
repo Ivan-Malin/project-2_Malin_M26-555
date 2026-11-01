@@ -5,22 +5,19 @@ from collections.abc import Sequence
 
 import prompt
 
-from primitive_db.constants import TABLES_METADATA_PATH
-from primitive_db.core import create_table, drop_table, parse_column_str
+from primitive_db.constants import HELP_TEXT, TABLES_METADATA_PATH
+from primitive_db.core import (
+    create_table,
+    create_tables_structure_if_none,
+    drop_table,
+    parse_column_str,
+)
 from primitive_db.utils import load_metadata, save_metadata
 
 
 def print_help() -> None:
-    """Print the help message for the current mode."""
-    print("\n***Процесс работы с таблицей***")
-    print("Функции:")
-    print("<command> create_table <имя_таблицы> <столбец1:тип> .. - создать таблицу")
-    print("<command> list_tables - показать список всех таблиц")
-    print("<command> drop_table <имя_таблицы> - удалить таблицу")
-
-    print("\nОбщие команды:")
-    print("<command> exit - выход из программы")
-    print("<command> help - справочная информация\n")
+    """Выводит вспомогательное сообщение с описанием пользовательского интерфейса."""
+    print(HELP_TEXT)
 
 
 def print_user_input_error() -> None:
@@ -168,6 +165,10 @@ def drop_table_by_args(command_args: list) -> None:
 def run() -> None:
     """Основной цикл программы."""
     print_help()
+
+    # Подготавливаем директорию целевую директорию под БД
+    create_tables_structure_if_none(TABLES_METADATA_PATH)
+
     while True:
         # Получаем ввод от пользователя
         command_args = get_and_parse_user_args()

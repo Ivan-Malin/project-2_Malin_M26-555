@@ -7,7 +7,8 @@ from collections.abc import Sequence
 # сделает это корректнее и быстрее
 from copy import deepcopy
 
-from primitive_db.constants import COLUMN_TYPES
+from primitive_db.constants import COLUMN_TYPES, DEFAULT_METADATA_CONTENT
+from primitive_db.utils import load_metadata, prepare_full_path, save_metadata
 
 
 def is_columns_propper(columns: list[tuple[str, str]]) -> bool:
@@ -51,6 +52,19 @@ def parse_column_str(column_str: str) -> tuple[str, str]:
         )
 
     return (column_name, column_type)
+
+
+def create_tables_structure_if_none(metadata_path: str) -> None:
+    """Создаёт структуру таблиц, если та отсутствует в директории.
+
+    Args:
+        metadata_path (str): путь до metadata
+
+    """
+    metadata = load_metadata(metadata_path)
+    if metadata == {}:
+        prepare_full_path(metadata_path)
+        save_metadata(metadata_path, DEFAULT_METADATA_CONTENT)
 
 
 def create_table(
