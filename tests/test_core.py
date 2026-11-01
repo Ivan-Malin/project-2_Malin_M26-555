@@ -62,6 +62,14 @@ def test_create_table():
         "create_table некорректно добавляет таблицу к уже существующей"
     )
 
+    # Проверяем добавление дубля
+    got_value_error_fl = False
+    try:
+        create_table(new_metadata, table_name, columns)
+    except ValueError:
+        got_value_error_fl = True
+    assert got_value_error_fl, "create_table не умеет отбрасывать создание дублей"
+
 
 def test_create_table_wrong_inputs():
     got_type_error_fl = False
