@@ -140,7 +140,7 @@ def confirm_action(
             **kwargs: P.kwargs,
         ) -> R:
 
-            if ask_confirmation("action_name"):
+            if ask_confirmation(action_name):
                 return func(*args, **kwargs)
             return None
 
