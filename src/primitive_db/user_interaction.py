@@ -27,10 +27,10 @@ def get_and_parse_user_args() -> list[str]:
         args (list[str]): аргументы
 
     """
-    command_line = get_user_command_line()
     command_args = None
 
     while not command_args:
+        command_line = get_user_command_line()
         try:
             command_args = shlex.split(command_line)
         except ValueError:

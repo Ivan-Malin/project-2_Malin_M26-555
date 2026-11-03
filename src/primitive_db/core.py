@@ -26,6 +26,7 @@ from primitive_db.utils import (
     CopyPolicy,
     get_table_path,
     is_table_structure_free,
+    remove_file,
 )
 
 
@@ -116,6 +117,8 @@ def drop_table(metadata: dict, table_name: str, data_path: str = DATA_PATH) -> d
     if table_name not in _metadata["tables"]:
         msg = f"metadata не содержит таблицы {table_name} для удаления"
         raise TableIsMissingError(msg)
+
+    remove_file(_metadata["tables"][table_name]["path"])
 
     del _metadata["tables"][table_name]
 

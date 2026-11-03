@@ -11,8 +11,8 @@ from primitive_db.constants import (
     TABLES_METADATA_PATH,
 )
 from primitive_db.engine import run
-from primitive_db.utils import load_metadata, save_metadata
 from primitive_db.tables import Table
+from primitive_db.utils import load_metadata, save_metadata
 
 # Замечание проверяющему - часть тестовых файлов были отданы на откуп Qwen'у,
 # т.к. тесты от нейросети (под пристальным ревью) лучше, чем никаких тестов вообще.
@@ -314,3 +314,156 @@ def test_run_tz_example_crud_cycle(capsys, monkeypatch):
         assert len(file_content.get("data", [])) == 0
     except NameError:
         pytest.skip("Не все CRUD команды реализованы в engine.py")
+
+
+def test_run_isolation_multiple_tables(capsys, monkeypatch):
+    """Проверка изоляции данных.
+
+    Дданные из Table_B не должны попадать в вывод Table_A.
+    """
+    _clean_db_state()
+
+    # Этап 1: Подготовка
+    cmds = [
+        "create_table table_alpha name:str",
+        "create_table table_beta name:str",
+        'insert into table_alpha values ("Alpha_Item")',
+        'insert into table_beta values ("Beta_Item")',
+        "exit",
+    ]
+    _run_with_commands(cmds, monkeypatch)
+    capsys.readouterr()  # Сброс
+
+    # Этап 2: Проверяем Alpha
+    _run_with_commands(["select from table_alpha", "exit"], monkeypatch)
+    out_alpha = capsys.readouterr().out
+    assert "Alpha_Item" in out_alpha
+    assert "Beta_Item" not in out_alpha
+
+    # Этап 3: Проверяем Beta
+    _run_with_commands(["select from table_beta", "exit"], monkeypatch)
+    out_beta = capsys.readouterr().out
+    assert "Beta_Item" in out_beta
+    assert "Alpha_Item" not in out_beta
+
+
+def test_run_update_delete_chain(capsys, monkeypatch):
+    """Сценарий: Изменение данных с проверкой исчезновения старых значений."""
+    _clean_db_state()
+
+    # Этап 1: База
+    cmds = [
+        "create_table users name:str status:str",
+        'insert into users values ("User_One", "Active")',
+        'insert into users values ("User_Two", "Pending")',
+        "exit",
+    ]
+    _run_with_commands(cmds, monkeypatch)
+    capsys.readouterr()
+
+    # Этап 2: Обновление статуса
+    _run_with_commands(
+        ['update users set status = "Blocked" where name = "User_One"', "exit"],
+        monkeypatch,
+    )
+    out_upd = capsys.readouterr().out
+    assert "Затронуто 1 записей" in out_upd
+
+    # Этап 3: Проверка результата обновления
+    _run_with_commands(["select from users", "exit"], monkeypatch)
+    out_sel = capsys.readouterr().out
+    assert "Blocked" in out_sel
+    assert "Active" not in out_sel  # Старый статус должен исчезнуть
+
+    # Этап 4: Удаление
+    _run_with_commands(
+        ['delete from users where name = "User_Two"', "y", "exit"], monkeypatch
+    )
+    capsys.readouterr()
+
+    # Этап 5: Финальная проверка
+    _run_with_commands(["select from users", "exit"], monkeypatch)
+    out_final = capsys.readouterr().out
+    assert "User_One" in out_final
+    assert "User_Two" not in out_final
+
+
+def test_run_error_recovery_and_recreation(capsys, monkeypatch):
+    """Сценарий: Обработка ошибки дубликата и успешное пересоздание."""
+    _clean_db_state()
+
+    # Этап 1: Создание
+    _run_with_commands(["create_table temp_tbl val:str", "exit"], monkeypatch)
+    out1 = capsys.readouterr().out
+    assert "Успех" in out1
+
+    # Этап 2: Ошибка дубля
+    _run_with_commands(["create_table temp_tbl val:str", "exit"], monkeypatch)
+    out2 = capsys.readouterr().out
+    assert "уже существует" in out2.lower() or "Ошибка" in out2
+
+    # Этап 3: Удаление
+    _run_with_commands(["drop_table temp_tbl", "y", "exit"], monkeypatch)
+    out3 = capsys.readouterr().out
+    assert "удалена" in out3.lower()
+
+    # Этап 4: Повторное создание
+    _run_with_commands(["create_table temp_tbl val:str", "exit"], monkeypatch)
+    out4 = capsys.readouterr().out
+    assert "Успех" in out4
+
+
+def test_run_where_filtering_precision(capsys, monkeypatch):
+    """Проверка точности фильтрации: поиск по уникальной строке."""
+    _clean_db_state()
+
+    # Этап 1: Данные
+    cmds = [
+        "create_table items code:str",
+        'insert into items values ("CODE_100")',
+        'insert into items values ("CODE_1000")',
+        'insert into items values ("CODE_200")',
+        "exit",
+    ]
+    _run_with_commands(cmds, monkeypatch)
+    capsys.readouterr()
+
+    # Этап 2: Фильтрация
+    _run_with_commands(
+        ['select from items where code = "CODE_100"', "exit"], monkeypatch
+    )
+    out_exact = capsys.readouterr().out
+
+    assert "CODE_100" in out_exact
+    assert "CODE_1000" not in out_exact
+    assert "CODE_200" not in out_exact
+
+
+def test_run_info_consistency(capsys, monkeypatch):
+    """Проверка актуальности метаданных через команду info."""
+    _clean_db_state()
+
+    # Этап 1: Пустая таблица
+    _run_with_commands(["create_table logs msg:str", "info logs", "exit"], monkeypatch)
+    out1 = capsys.readouterr().out
+    assert "Количество записей: 0" in out1
+
+    # Этап 2: Добавление данных
+    _run_with_commands(['insert into logs values ("Log_Entry_1")', "exit"], monkeypatch)
+    capsys.readouterr()
+
+    # Этап 3: Проверка info после вставки
+    _run_with_commands(["info logs", "exit"], monkeypatch)
+    out2 = capsys.readouterr().out
+    assert "Количество записей: 1" in out2
+
+    # Этап 4: Удаление данных
+    _run_with_commands(
+        ['delete from logs where msg = "Log_Entry_1"', "y", "exit"], monkeypatch
+    )
+    capsys.readouterr()
+
+    # Этап 5: Проверка info после удаления
+    _run_with_commands(["info logs", "exit"], monkeypatch)
+    out3 = capsys.readouterr().out
+    assert "Количество записей: 0" in out3

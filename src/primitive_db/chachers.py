@@ -42,7 +42,7 @@ class TableCacher:
         ) -> R:
             # Частная реализация хеширования специально для класса Table
             if where_clause is None:
-                key = _self.name
+                key = (_self.name,)
             else:
                 key = (_self.name, tuple(where_clause.items()))
 

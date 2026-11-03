@@ -230,3 +230,8 @@ def get_current_path() -> str:
 
     """
     return os.path.dirname(__file__)
+
+
+def remove_file(filepath: str) -> None:
+    """Удаляет файл."""
+    os.remove(filepath)
