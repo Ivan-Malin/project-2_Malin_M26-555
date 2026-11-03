@@ -1,7 +1,5 @@
 """Содержит функции по взаимодействию с пользователем."""
 
-import shlex
-
 import prompt  # Заброшенная отвратительная библиотека. Но нужна по ТЗ...
 from prettytable import PrettyTable
 
@@ -32,7 +30,10 @@ def get_and_parse_user_args() -> list[str]:
     while not command_args:
         command_line = get_user_command_line()
         try:
-            command_args = shlex.split(command_line)
+            # ВАЖНО!!! shlex.split не умел работать с кавычками
+            # внутри скобок, поэтому был заменён на обычный split(' ')
+            # у которого в контексте текущей задачи нет недостатков
+            command_args = command_line.split(" ")
         except ValueError:
             print_user_input_error()
             command_args = None

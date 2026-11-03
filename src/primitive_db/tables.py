@@ -6,7 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from primitive_db.chachers import TableCacher
+from primitive_db.cachers import TableCacher
 from primitive_db.constants import COLUMN_TYPES, DATA_PATH
 from primitive_db.errors import ColumnIsMissingError, TableIsMissingError
 from primitive_db.utils import (

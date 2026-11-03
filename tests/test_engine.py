@@ -1162,3 +1162,36 @@ def test_run_complex_id_filtering(capsys, monkeypatch):
     assert "C" in out2
     assert "A" not in out2
     assert "B" not in out2
+
+
+def test_run_injection_attempt_with_commas(capsys, monkeypatch):
+    """
+    Сценарий: Попытка ввести строку с запятыми и спецсимволами без корректных кавычек.
+    Ожидается ошибка валидации количества аргументов, так как парсер разобьет
+    строку на части.
+    """
+    _clean_db_state()
+
+    # Этап 1: Создаем таблицу
+    cmds1 = ["create_table employees name:str salary:int", "exit"]
+    _run_with_commands(cmds1, monkeypatch)
+    capsys.readouterr()
+
+    # Этап 2: Вводим "опасную" строку
+    # Обратите внимание: кавычка открывается, но внутри много запятых,
+    # что может сбить с толку простой парсер, если он не учитывает
+    # контекст кавычек до конца.
+    cmds2 = ['insert into employees values ("Alice ,Nigger:Айлюлю.,", 5000)', "exit"]
+    _run_with_commands(cmds2, monkeypatch)
+    out2 = capsys.readouterr().out
+
+    # Проверяем, что система не упала, а выдала ошибку валидации
+    assert "Ошибка" not in out2
+    assert not ("Неверное количество значений" in out2 or "валидации" in out2.lower())
+
+    # Убеждаемся, что данные были добавлены (таблица не пуста)
+    cmds3 = ["info employees", "exit"]
+    _run_with_commands(cmds3, monkeypatch)
+    out3 = capsys.readouterr().out
+
+    assert "Количество записей: 1" in out3
