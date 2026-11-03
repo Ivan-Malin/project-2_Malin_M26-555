@@ -1,4 +1,6 @@
+import tempfile
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -132,63 +134,76 @@ def test_create_table_wrong_inputs():
     assert got_type_error_fl, "create_table не умеет обрабатывать неправилный columns"
 
 
-def test_drop_table():
-    metadata = {
-        "tables": {
-            "лекарства": {
-                "columns": [
-                    ("ID", "int"),
-                    ("название", "str"),
-                    ("описание", "str"),
-                    ("мин_возраст", "int"),
-                    ("можно_принимать_беременным", "bool"),
-                ]
-            },
-            "аптеки": {
-                "columns": [
-                    ("ID", "int"),
-                    ("название", "str"),
-                    ("владелец", "str"),
-                    ("количество_сотрудников", "int"),
-                    ("работает", "bool"),
-                ]
-            },
-        }
-    }
-    table_name = "аптеки"
+def test_drop_table_full_lifecycle():
+    """Тест полного цикла.
 
-    propper_new_metadata = {
-        "tables": {
-            "лекарства": {
-                "columns": [
-                    ("ID", "int"),
-                    ("название", "str"),
-                    ("описание", "str"),
-                    ("мин_возраст", "int"),
-                    ("можно_принимать_беременным", "bool"),
-                ]
-            }
-        }
-    }
-    propper_metadata = deepcopy(metadata)
-    propper_table_name = deepcopy(table_name)
+    Создание таблицы -> проверка файла -> удаление -> проверка исчезновения.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        metadata = {}
+        table_name = "test_drop"
+        columns = [("name", "str"), ("val", "int")]
 
-    new_metadata = drop_table(metadata, table_name)
+        # 1. Создаем таблицу
+        metadata = create_table(metadata, table_name, columns, data_path=tmp_dir)
 
-    assert id(metadata) != id(new_metadata) and metadata == propper_metadata, (
-        "drop_table меняет исходный словарь!"
-    )
-    assert table_name == propper_table_name, "drop_table меняет аргумент table_name!"
-    assert new_metadata == propper_new_metadata, "drop_table работает некорректно"
+        # Проверяем, что таблица появилась в метаданных
+        assert table_name in metadata["tables"]
+
+        # Получаем путь к файлу из метаданных
+        table_path = metadata["tables"][table_name]["path"]
+
+        # Проверяем, что файл физически существует
+        assert Path(table_path).exists(), f"Файл таблицы {table_path} не был создан!"
+
+        # 2. Удаляем таблицу
+        new_metadata = drop_table(metadata, table_name, data_path=tmp_dir)
+
+        # 3. Проверяем метаданные
+        assert table_name not in new_metadata["tables"], (
+            "Таблица должна исчезнуть из метаданных!"
+        )
+        assert id(metadata) != id(new_metadata), (
+            "drop_table должен возвращать новый объект!"
+        )
+
+        # 4. Проверяем, что файл удален (если реализация core.drop_table это делает)
+        # Если твоя реализация пока не удаляет файл, закомментируй эту строку или измени
+        # логику в core.py
+        assert not Path(table_path).exists(), (
+            f"Файл таблицы {table_path} должен быть удален!"
+        )
 
 
-def test_drop_table_wrong_input():
-    got_key_error_fl = False
-    try:
-        drop_table({}, "аптеки")
-    except KeyError:
-        got_key_error_fl = True
-    assert got_key_error_fl, "drop_table не умеет обрабатывать неправилный table_name"
+def test_drop_table_nonexistent():
+    """Тест удаления несуществующей таблицы."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        metadata = {}
+        # Создаем одну таблицу, чтобы metadata была валидной
+        metadata = create_table(
+            metadata, "existing", [("val", "int")], data_path=tmp_dir
+        )
+
+        with pytest.raises(KeyError):
+            drop_table(metadata, "non_existent", data_path=tmp_dir)
+
+
+def test_drop_table_immutability():
+    """Проверка, что исходные данные не меняются при удалении."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        metadata = {}
+        metadata = create_table(metadata, "t1", [("v", "int")], data_path=tmp_dir)
+        metadata = create_table(metadata, "t2", [("v", "int")], data_path=tmp_dir)
+
+        original_meta = deepcopy(metadata)
+
+        new_metadata = drop_table(metadata, "t1", data_path=tmp_dir)
+
+        assert metadata == original_meta, (
+            "Исходный словарь metadata не должен изменяться!"
+        )
+        assert "t1" not in new_metadata["tables"]
+        assert "t2" in new_metadata["tables"]
 
 
 # Остальные тесты test_core.py сгенерировала нейронка под пристальным надзором,
@@ -318,13 +333,14 @@ def test_update_single_record():
 
     propper_table_data = deepcopy(table_data)
 
-    new_table = update(table_data, set_clause, where_clause)
+    new_table, updated_count = update(table_data, set_clause, where_clause)
 
     # Проверка неизменности исходной таблицы
     assert table_data.data == propper_table_data.data, (
         "update изменил исходную таблицу!"
     )
     assert id(table_data) != id(new_table), "update должен возвращать новую таблицу!"
+    assert updated_count == 1, "Должна быть обновлена 1 запись!"
 
     # Проверка результата
     assert new_table.data[1]["age"] == 31, "Возраст Bob не обновился!"
@@ -342,8 +358,9 @@ def test_update_multiple_records():
     set_clause = {"is_active": True}
     where_clause = {"is_active": False}
 
-    new_table = update(table_data, set_clause, where_clause)
+    new_table, updated_count = update(table_data, set_clause, where_clause)
 
+    assert updated_count == 2, "Должны быть обновлены 2 записи!"
     assert all(r["is_active"] is True for r in new_table.data), (
         "Все записи должны стать активными!"
     )
@@ -368,7 +385,7 @@ def test_delete_single_record():
     where_clause = {"name": "Alice"}
     propper_table_data = deepcopy(table_data)
 
-    new_table = delete(table_data, where_clause)
+    new_table, deleted_count = delete(table_data, where_clause)
 
     # Проверка неизменности исходной таблицы
     assert table_data.data == propper_table_data.data, (
@@ -377,6 +394,7 @@ def test_delete_single_record():
     assert len(table_data.data) == 2, (
         "Количество записей в исходной таблице не должно измениться!"
     )
+    assert deleted_count == 1, "Должна быть удалена 1 запись!"
 
     # Проверка результата
     assert len(new_table.data) == 1, "В новой таблице должна остаться 1 запись!"
@@ -394,8 +412,9 @@ def test_delete_multiple_records():
 
     where_clause = {"is_active": False}
 
-    new_table = delete(table_data, where_clause)
+    new_table, deleted_count = delete(table_data, where_clause)
 
+    assert deleted_count == 2, "Должны быть удалены 2 записи!"
     assert len(new_table.data) == 1, "Должна остаться только 1 активная запись!"
     assert new_table.data[0]["name"] == "Charlie"
 
@@ -405,7 +424,8 @@ def test_delete_no_matches():
     initial_data = [{"ID": 1, "name": "Alice", "age": 25, "is_active": True}]
     table_data = _create_test_table(data=initial_data)
 
-    new_table = delete(table_data, {"name": "Bob"})
+    new_table, deleted_count = delete(table_data, {"name": "Bob"})
 
+    assert deleted_count == 0, "Ничего не должно быть удалено!"
     assert len(new_table.data) == 1, "Записи не должны быть удалены!"
     assert new_table.data[0]["name"] == "Alice"
