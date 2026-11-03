@@ -20,7 +20,7 @@ from copy import deepcopy
 from typing import Any
 
 from primitive_db.constants import DATA_PATH
-from primitive_db.errors import TableAlreadyExistsError
+from primitive_db.errors import TableAlreadyExistsError, TableIsMissingError
 from primitive_db.tables import Table, is_columns_propper
 from primitive_db.utils import (
     CopyPolicy,
@@ -111,11 +111,11 @@ def drop_table(metadata: dict, table_name: str, data_path: str = DATA_PATH) -> d
 
     if "tables" not in _metadata:
         msg = "metadata не содержит таблиц для удаления"
-        raise KeyError(msg)
+        raise TableIsMissingError(msg)
 
     if table_name not in _metadata["tables"]:
         msg = f"metadata не содержит таблицы {table_name} для удаления"
-        raise KeyError(msg)
+        raise TableIsMissingError(msg)
 
     del _metadata["tables"][table_name]
 

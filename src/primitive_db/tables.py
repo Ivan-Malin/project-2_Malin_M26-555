@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from primitive_db.constants import COLUMN_TYPES, DATA_PATH
-from primitive_db.errors import TableIsMissingError
+from primitive_db.errors import ColumnIsMissingError, TableIsMissingError
 from primitive_db.utils import (
     CopyPolicy,
     OverwritePolicy,
@@ -273,7 +273,7 @@ class Table:
         for col_name, new_value in set_clause.items():
             if col_name not in col_types:
                 msg = f"Столбец '{col_name}' не существует в таблице '{self.name}'."
-                raise KeyError(msg)
+                raise ColumnIsMissingError(msg)
             if col_name == "ID":
                 msg = "Изменение ID запрещено."
                 raise ValueError(msg)
@@ -470,9 +470,9 @@ class Table:
         # Создаем директорию, если её нет
         prepare_full_path(file_path)
 
-        # Не смотря на возможности формата json не храним в самой таблице
+        # Не смотря на возможности формата json, не храним в самой таблице
         # метаданные для масштабируемости и совместимости с другими форматами
-        # в будущем (за счёт хранения данных в metadata)
+        # в будущем (за счёт хранения метаданных в metadata файле)
         serializable_data = {
             "data": table.data,
         }

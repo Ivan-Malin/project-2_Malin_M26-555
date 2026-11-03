@@ -1,10 +1,32 @@
 """Декораторы для работы с функциями БД в engine.py."""
 
+# Замечание по decorators.py - эти декораторы применены не к
+# core.py, а к engine.py, потому что делать обёртки на ошибки
+# в основной логике, чтобы они логгировались, а не просачивались
+# дальше - опасно. Стоит какой-то непредвиденной ошибке выскочить
+# и неграмотно составленное тестирование / тесировщик
+# её просто не заметит, т.к. приложение продолжит работать,
+# не падая с ошибкой. Любая непредвиденаня ошибка
+# должна быть видна сразу и заметна всем.
+# Именно поэтому декораторы применены к engine.py,
+# точке входа cli, где вывод в терминал подразумевается по умолчанию
+# и является единственной опцией.
+#
+# Errors should never pass silently.
+# Unless explicitly silenced.
+# - The Zen of Python.
+
 from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
+from json import JSONDecodeError
 from typing import ParamSpec, TypeVar
 
 from primitive_db.constants import SPECIAL_SYMBOLS_IN_USER_ARGS
+from primitive_db.errors import (
+    ColumnIsMissingError,
+    TableAlreadyExistsError,
+    TableIsMissingError,
+)
 from primitive_db.printing import print_err
 
 P = ParamSpec("P")
@@ -69,4 +91,34 @@ def check_user_input(
 
         return wrapper
 
-    return decorator  # возвращаем декоратор
+    return decorator
+
+
+def handle_db_errors[**P, R](func: Callable[P, R]) -> Callable[P, R | None]:
+    """Обрабатывает стандартные ошибки БД."""
+
+    def wrapper(
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
+        try:
+            return func(*args, **kwargs)
+        except FileNotFoundError:
+            print_err(
+                "Ошибка: Файл данных не найден. "
+                "Возможно, база данных не инициализирована.",
+            )
+        except JSONDecodeError as e:
+            print_err(f"Файлы БД повреждены. {e}")
+        except TableAlreadyExistsError as e:
+            print_err(f"Таблица уже существует. {e}")
+        except TableIsMissingError as e:
+            print_err(f"Таблицы не существует. {e}")
+        except ColumnIsMissingError as e:
+            print_err(f"Столбец не найден. {e}")
+        except ValueError as e:
+            print_err(f"Ошибка валидации: {e}")
+        except Exception as e:
+            print_err(f"Произошла непредвиденная ошибка: {e}")
+
+    return wrapper

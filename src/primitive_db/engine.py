@@ -13,8 +13,7 @@ from primitive_db.core import (
     select,
     update,
 )
-from primitive_db.decorators import check_user_input
-from primitive_db.errors import TableAlreadyExistsError, TableIsMissingError
+from primitive_db.decorators import check_user_input, handle_db_errors
 from primitive_db.parser import (
     parse_column_str,
     parse_insert_values,
@@ -75,6 +74,7 @@ def get_and_parse_user_args() -> list[str]:
     return tokenize_user_args(command_args)
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["create_table"][0])
 def create_table_by_args(command_args: list) -> None:
     """Создаёт таблицу по аргументам от пользователя.
@@ -88,24 +88,17 @@ def create_table_by_args(command_args: list) -> None:
 
     table_name = command_args[1]
 
-    try:
-        columns = [
-            parse_column_str(column_str) for column_str in command_args[2].split(" ")
-        ]
-    except (IndexError, KeyError, ValueError, TypeError) as err:
-        print_err(err)
-        return
+    columns = [
+        parse_column_str(column_str) for column_str in command_args[2].split(" ")
+    ]
 
-    try:
-        metadata = create_table(metadata, table_name, columns)
-    except (TypeError, ValueError, TableAlreadyExistsError) as err:
-        print_err(err)
-        return
+    metadata = create_table(metadata, table_name, columns)
 
     save_metadata(TABLES_METADATA_PATH, metadata)
     print_success(f"Таблица '{table_name}' успешно создана")
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["drop_table"][0])
 def drop_table_by_args(command_args: list) -> None:
     """Удаляет таблицу по аргументам от пользователя.
@@ -119,16 +112,13 @@ def drop_table_by_args(command_args: list) -> None:
 
     table_name = command_args[1]
 
-    try:
-        metadata = drop_table(metadata, table_name)
-    except KeyError as err:
-        print_err(err)
-        return
+    metadata = drop_table(metadata, table_name)
 
     save_metadata(TABLES_METADATA_PATH, metadata)
     print_success(f"Таблица '{table_name}' успешно удалена")
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["list_tables"][0])
 def list_tables_by_args(command_args: list) -> None:
     """Выводит список всех таблиц на экран.
@@ -145,6 +135,7 @@ def list_tables_by_args(command_args: list) -> None:
     print(f"Список таблиц: {', '.join(table_names)}")
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["insert"][0])
 def insert_into_table_by_args(command_args: list) -> None:
     """Добавляет запись в таблицу по аргументам от пользователя.
@@ -158,28 +149,21 @@ def insert_into_table_by_args(command_args: list) -> None:
 
     table_name = command_args[2]
 
-    try:
-        table = Table.load_table_by_metadata(metadata, table_name)
-    except TableIsMissingError as err:
-        print_err(err)
-        return
+    table = Table.load_table_by_metadata(metadata, table_name)
 
     # Вставляем данные в таблицу
     values = parse_insert_values(command_args[4])
 
-    try:
-        table_result = insert(table, values)
-        Table.save_table_by_metadata(
-            metadata,
-            table_result,
-            overwrite=OverwritePolicy.DO_OVERWRITE,
-        )
-        print_success(f"Данные успешно добавлены в таблицу {table_name}.")
-    except (TypeError, ValueError) as err:
-        print_err(f"{err}")
-        return
+    table_result = insert(table, values)
+    Table.save_table_by_metadata(
+        metadata,
+        table_result,
+        overwrite=OverwritePolicy.DO_OVERWRITE,
+    )
+    print_success(f"Данные успешно добавлены в таблицу {table_name}.")
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["select"][0])
 def select_from_table_by_args(command_args: list) -> None:
     """Выбирает записи из таблицы по аргументам от пользователя.
@@ -198,11 +182,7 @@ def select_from_table_by_args(command_args: list) -> None:
     table_name = command_args[2]
 
     # Загружаем таблицу
-    try:
-        table = Table.load_table_by_metadata(metadata, table_name)
-    except TableIsMissingError as err:
-        print_err(err)
-        return
+    table = Table.load_table_by_metadata(metadata, table_name)
 
     # Парсим where_clause
     if (
@@ -211,20 +191,12 @@ def select_from_table_by_args(command_args: list) -> None:
     ):
         condition_str = command_args[4]
 
-        try:
-            where_clause = parse_where_clause(condition_str)
-        except (ValueError, TypeError) as err:
-            print_err(f"Ошибка в условии where: {err}")
-            return
+        where_clause = parse_where_clause(condition_str)
     else:
         where_clause = None
 
     # Выполняем select
-    try:
-        results = select(table, where_clause)
-    except ValueError as err:
-        print_err(err)
-        return
+    results = select(table, where_clause)
 
     # Выводим результат с помощью PrettyTable
     if not results:
@@ -234,6 +206,7 @@ def select_from_table_by_args(command_args: list) -> None:
     print_table(table, results)
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["delete"][0])
 def delete_from_table_by_args(command_args: list) -> None:
     """Удаляет записи из таблицы по аргументам от пользователя.
@@ -251,11 +224,7 @@ def delete_from_table_by_args(command_args: list) -> None:
     table_name = command_args[2]
 
     # Загружаем таблицу
-    try:
-        table = Table.load_table_by_metadata(metadata, table_name)
-    except TableIsMissingError as err:
-        print_err(err)
-        return
+    table = Table.load_table_by_metadata(metadata, table_name)
 
     # Парсим where_clause
     if (
@@ -264,33 +233,25 @@ def delete_from_table_by_args(command_args: list) -> None:
     ):
         condition_str = command_args[4]
 
-        try:
-            where_clause = parse_where_clause(condition_str)
-        except (ValueError, TypeError) as err:
-            print_err(f"Ошибка в условии where: {err}")
-            return
+        where_clause = parse_where_clause(condition_str)
     else:
         print_err("Для удаления записей необходимо указать условие where.")
         return
 
     # Выполняем удаление
-    try:
-        table_result, delete_count = delete(table, where_clause)
+    table_result, delete_count = delete(table, where_clause)
 
-        # Сохраняем обновленную таблицу
-        Table.save_table_by_metadata(
-            metadata,
-            table_result,
-            overwrite=OverwritePolicy.DO_OVERWRITE,
-        )
+    # Сохраняем обновленную таблицу
+    Table.save_table_by_metadata(
+        metadata,
+        table_result,
+        overwrite=OverwritePolicy.DO_OVERWRITE,
+    )
 
-        print_success(f"Удалено записей: {delete_count} из таблицы '{table_name}'.")
-
-    except (KeyError, ValueError, TypeError, TableIsMissingError) as err:
-        print_err(f"Ошибка при удалении: {err}")
-        return
+    print_success(f"Удалено записей: {delete_count} из таблицы '{table_name}'.")
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["update"][0])
 def update_table_by_args(command_args: list) -> None:
     """Обновляет записи в таблице по аргументам от пользователя.
@@ -308,41 +269,28 @@ def update_table_by_args(command_args: list) -> None:
     table_name = command_args[1]
 
     # Загружаем таблицу
-    try:
-        table = Table.load_table_by_metadata(metadata, table_name)
-    except TableIsMissingError as err:
-        print_err(err)
-        return
+    table = Table.load_table_by_metadata(metadata, table_name)
 
     # Парсим set и where
-    try:
-        set_clause = parse_set_clause(command_args[3])
-        where_clause = parse_where_clause(command_args[5])
-
-    except (ValueError, TypeError) as err:
-        print_err(f"Ошибка в синтаксисе команды: {err}")
-        return
+    set_clause = parse_set_clause(command_args[3])
+    where_clause = parse_where_clause(command_args[5])
 
     # Выполняем обновление
-    try:
-        table_result, update_count = update(table, set_clause, where_clause)
+    table_result, update_count = update(table, set_clause, where_clause)
 
-        Table.save_table_by_metadata(
-            metadata,
-            table_result,
-            overwrite=OverwritePolicy.DO_OVERWRITE,
-        )
+    Table.save_table_by_metadata(
+        metadata,
+        table_result,
+        overwrite=OverwritePolicy.DO_OVERWRITE,
+    )
 
-        print_success(
-            f"Записи в таблице '{table_name}' успешно обновлены. "
-            f"Затронуто {update_count} записей.",
-        )
-
-    except (KeyError, ValueError, TypeError, TableAlreadyExistsError) as err:
-        print_err(f"Ошибка при обновлении: {err}")
-        return
+    print_success(
+        f"Записи в таблице '{table_name}' успешно обновлены. "
+        f"Затронуто {update_count} записей.",
+    )
 
 
+@handle_db_errors
 @check_user_input(DB_COMMANDS["info"][0])
 def info_from_table_by_args(command_args: list) -> None:
     """Выводит информацию о таблице по аргументам от пользователя.
@@ -360,11 +308,7 @@ def info_from_table_by_args(command_args: list) -> None:
     table_name = command_args[1]
 
     # Загружаем таблицу для получения актуальных данных и схемы
-    try:
-        table = Table.load_table_by_metadata(metadata, table_name)
-    except TableAlreadyExistsError as err:
-        print_err(err)
-        return
+    table = Table.load_table_by_metadata(metadata, table_name)
 
     # Формируем данные
     columns_str = ", ".join([f"{name}:{dtype}" for name, dtype in table.columns])

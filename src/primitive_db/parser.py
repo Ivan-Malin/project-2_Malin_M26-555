@@ -3,10 +3,11 @@
 from typing import Any
 
 from primitive_db.constants import COLUMN_TYPES, SUPPORTED_COMPARSION_SYMBOLS
+from primitive_db.errors import CommandParseError
 
 
 # Пункт про arg1:type1 arg2:type2 напрямую исходит
-# из корявого ТЗ, в котором create_table
+# из ТЗ, в котором create_table
 # имеет синтаксис без запятых...
 def tokenize_user_args(args: list[str]) -> list[str]:
     """Токенизирует аргументы.
@@ -73,9 +74,7 @@ def parse_column_str(column_str: str) -> tuple[str, str]:
     column_name, column_type = column_str.split(":")
     if column_type not in COLUMN_TYPES:
         msg = f"Неправильный тип колонки: {column_type}, не один из {COLUMN_TYPES}"
-        raise TypeError(
-            msg,
-        )
+        raise CommandParseError(msg)
 
     return (column_name, column_type)
 
@@ -94,7 +93,7 @@ def parse_condition(condition_str: str) -> dict[str, Any]:
         dict[str, Any]: Словарь для присвоения / поиска записей.
 
     Raises:
-        ValueError: Если формат строки неверен.
+        CommandParseError: Если формат строки неверен.
 
     """
     if not condition_str or "=" not in condition_str:
@@ -104,14 +103,14 @@ def parse_condition(condition_str: str) -> dict[str, Any]:
     parts = condition_str.split("=")
     if len(parts) != len(("имя", type)):
         msg = f"Неверный формат условия: '{condition_str}'"
-        raise ValueError(msg)
+        raise CommandParseError(msg)
 
     key = parts[0].strip()
     value_str = parts[1].strip()
 
     if not key:
         msg = f"Отсутствует имя столбца в условии: '{condition_str}'"
-        raise ValueError(msg)
+        raise CommandParseError(msg)
 
     value = _convert_value(value_str)
     return {key: value}
@@ -191,6 +190,10 @@ def parse_insert_values(values_str: str) -> list[Any]:
     # Добавляем последнее значение
     if current_val.strip():
         values.append(_convert_value(current_val.strip()))
+
+    if not values:
+        msg = "Отсутствуют элементы внутри скобок."
+        raise CommandParseError(msg)
 
     return values
 
