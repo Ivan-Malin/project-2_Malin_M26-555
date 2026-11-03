@@ -8,6 +8,9 @@ DATA_PATH = f"{os.path.dirname(__file__)}/../../data"
 TABLES_METADATA_PATH = f"{DATA_PATH}/db_meta.json"
 DEFAULT_METADATA_CONTENT = {"tables": {}}
 
+# Формат описания команд специфичный, но необходимый.
+# Хоть где-то хоть в каком-то формате требуется фиксировать
+# явный синтаксис команд.
 DB_COMMANDS = {
     "create_table": (
         {

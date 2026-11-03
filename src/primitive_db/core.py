@@ -13,6 +13,7 @@
 # - исполнителем было принято решение строго следовать ТЗ
 #   и сделать (т.к. это логически для данных формулировок
 #   более корректно) аргументы функции неизменяемыми
+# - так же кэширование вынесено в сам tables.py заместо core.py
 
 # Копирование можно было расписать вручную, но deepcopy
 # сделает это корректнее и быстрее
@@ -145,7 +146,7 @@ def insert(table_data: Table, values: list) -> Table:
     _table_data.insert(values)
     return _table_data
 
-
+# По кешированию см. cachers.py и tables.py
 def select(table_data: Table, where_clause: dict[str, Any] | None = None) -> list[dict]:
     """Выбирает записи из таблицы, что соответствуют условию.
 
