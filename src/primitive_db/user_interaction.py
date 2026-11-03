@@ -1,9 +1,66 @@
-"""Содержит функции по выводы информации."""
+"""Содержит функции по взаимодействию с пользователем."""
 
+import shlex
+
+import prompt  # Заброшенная отвратительная библиотека. Но нужна по ТЗ...
 from prettytable import PrettyTable
 
 from primitive_db.constants import DB_COMMANDS, GENERAL_COMMANDS
+from primitive_db.parser import tokenize_user_args
 from primitive_db.tables import Table
+
+
+def get_user_command_line() -> str:
+    """Welcome-функция, получающая ввод пользователя.
+
+    Returns:
+        str: название команды
+
+    """
+    return prompt.string(">>> Введите команду: ")
+
+
+def get_and_parse_user_args() -> list[str]:
+    """Welcome-функция, получающая и декодирующая ввод пользователя.
+
+    Returns:
+        args (list[str]): аргументы
+
+    """
+    command_line = get_user_command_line()
+    command_args = None
+
+    while not command_args:
+        try:
+            command_args = shlex.split(command_line)
+        except ValueError:
+            print_user_input_error()
+            command_args = None
+            continue
+
+        if len(command_args) == 0:
+            print_user_input_error()
+            command_args = None
+            continue
+
+    return tokenize_user_args(command_args)
+
+
+def ask_confirmation(action_name: str = "") -> None:
+    """Пишет запрос на подтверждения действия.
+
+    Args:
+        action_name (str, optional): Название действия. Defaults to "".
+
+    """
+    if action_name is None:
+        action_name = "действие"
+
+    result = prompt.string(
+        f'>> Вы уверены, что хотите выполнить "{action_name}"? [y/n]: ',
+    )
+
+    return result.lower().replace(" ", "") == "y"
 
 
 def print_help() -> None:

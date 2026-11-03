@@ -45,7 +45,7 @@ def _run_with_commands(commands: list[str], monkeypatch):
 
     monkeypatch.setattr("builtins.input", mock_input)
 
-    with patch("primitive_db.engine.prompt.string", side_effect=mock_input):
+    with patch("primitive_db.user_interaction.prompt.string", side_effect=mock_input):
         with patch("primitive_db.engine.create_database_structure_if_none"):
             run()
 
@@ -53,7 +53,7 @@ def _run_with_commands(commands: list[str], monkeypatch):
 def test_run_create_and_drop_integration(capsys, monkeypatch):
     _clean_db_state()
 
-    commands = ["create_table users name:str age:int", "drop_table users", "exit"]
+    commands = ["create_table users name:str age:int", "drop_table users", "y", "exit"]
 
     _run_with_commands(commands, monkeypatch)
 
@@ -100,6 +100,7 @@ def test_run_full_crud_cycle(capsys, monkeypatch):
         "select from users where age = 25",
         'update users set age = 26 where name = "Alice"',
         'delete from users where name = "Bob"',
+        "y",
         "exit",
     ]
 
@@ -147,7 +148,7 @@ def test_run_drop_table_integration(capsys, monkeypatch):
     data_dir.mkdir(parents=True, exist_ok=True)
     save_metadata(TABLES_METADATA_PATH, DEFAULT_METADATA_CONTENT)
 
-    commands = ["create_table users name:str age:int", "drop_table users", "exit"]
+    commands = ["create_table users name:str age:int", "drop_table users", "y", "exit"]
 
     command_iter = iter(commands)
 
@@ -159,7 +160,7 @@ def test_run_drop_table_integration(capsys, monkeypatch):
 
     monkeypatch.setattr("builtins.input", mock_input)
 
-    with patch("primitive_db.engine.prompt.string", side_effect=mock_input):
+    with patch("primitive_db.user_interaction.prompt.string", side_effect=mock_input):
         with patch("primitive_db.engine.create_database_structure_if_none"):
             run()
 
@@ -286,6 +287,7 @@ def test_run_tz_example_crud_cycle(capsys, monkeypatch):
         "select from users where age = 28",
         'update users set age = 29 where name = "Sergei"',
         "delete from users where ID = 1",
+        "y",
         "info users",
         "exit",
     ]

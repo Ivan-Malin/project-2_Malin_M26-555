@@ -2,7 +2,7 @@
 
 # Замечание по decorators.py - эти декораторы применены не к
 # core.py, а к engine.py, потому что делать обёртки на ошибки
-# в основной логике, чтобы они логгировались, а не просачивались
+# в основной логике, чтобы они выводились на экран, а не просачивались
 # дальше - опасно. Стоит какой-то непредвиденной ошибке выскочить
 # и неграмотно составленное тестирование / тесировщик
 # её просто не заметит, т.к. приложение продолжит работать,
@@ -27,7 +27,7 @@ from primitive_db.errors import (
     TableAlreadyExistsError,
     TableIsMissingError,
 )
-from primitive_db.printing import print_err
+from primitive_db.user_interaction import ask_confirmation, print_err
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -95,7 +95,11 @@ def check_user_input(
 
 
 def handle_db_errors[**P, R](func: Callable[P, R]) -> Callable[P, R | None]:
-    """Обрабатывает стандартные ошибки БД."""
+    """Обрабатывает стандартные ошибки БД.
+
+    Выводит на экран информацию об ошибках в зависимости от того,
+    что вызовет функция.
+    """
 
     def wrapper(
         *args: P.args,
@@ -122,3 +126,24 @@ def handle_db_errors[**P, R](func: Callable[P, R]) -> Callable[P, R | None]:
             print_err(f"Произошла непредвиденная ошибка: {e}")
 
     return wrapper
+
+
+def confirm_action(
+    action_name: str,
+) -> Callable[[Callable[P, R]], Callable[P, R | None]]:
+    """Спрашивает у пользователя подтвержденние на действие."""
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R | None]:
+        @wraps(func)
+        def wrapper(
+            *args: P.args,
+            **kwargs: P.kwargs,
+        ) -> R:
+
+            if ask_confirmation("action_name"):
+                return func(*args, **kwargs)
+            return None
+
+        return wrapper
+
+    return decorator

@@ -1,9 +1,5 @@
 """Содержит основной цикл проекта по работе с базой данных."""
 
-import shlex
-
-import prompt
-
 from primitive_db.constants import DB_COMMANDS, TABLES_METADATA_PATH
 from primitive_db.core import (
     create_table,
@@ -13,65 +9,28 @@ from primitive_db.core import (
     select,
     update,
 )
-from primitive_db.decorators import check_user_input, handle_db_errors
+from primitive_db.decorators import check_user_input, confirm_action, handle_db_errors
 from primitive_db.parser import (
     parse_column_str,
     parse_insert_values,
     parse_set_clause,
     parse_where_clause,
-    tokenize_user_args,
 )
-from primitive_db.printing import (
+from primitive_db.tables import Table
+from primitive_db.user_interaction import (
+    get_and_parse_user_args,
     print_err,
     print_help,
     print_no_command,
     print_success,
     print_table,
-    print_user_input_error,
 )
-from primitive_db.tables import Table
 from primitive_db.utils import (
     OverwritePolicy,
     create_database_structure_if_none,
     load_metadata,
     save_metadata,
 )
-
-
-def get_user_command_line() -> str:
-    """Welcome-функция, получающая ввод пользователя.
-
-    Returns:
-        str: название команды
-
-    """
-    return prompt.string(">>> Введите команду: ")
-
-
-def get_and_parse_user_args() -> list[str]:
-    """Welcome-функция, получающая и декодирующая ввод пользователя.
-
-    Returns:
-        args (list[str]): аргументы
-
-    """
-    command_line = get_user_command_line()
-    command_args = None
-
-    while not command_args:
-        try:
-            command_args = shlex.split(command_line)
-        except ValueError:
-            print_user_input_error()
-            command_args = None
-            continue
-
-        if len(command_args) == 0:
-            print_user_input_error()
-            command_args = None
-            continue
-
-    return tokenize_user_args(command_args)
 
 
 @handle_db_errors
@@ -98,6 +57,7 @@ def create_table_by_args(command_args: list) -> None:
     print_success(f"Таблица '{table_name}' успешно создана")
 
 
+@confirm_action("удаление таблицы")
 @handle_db_errors
 @check_user_input(DB_COMMANDS["drop_table"][0])
 def drop_table_by_args(command_args: list) -> None:
@@ -206,6 +166,7 @@ def select_from_table_by_args(command_args: list) -> None:
     print_table(table, results)
 
 
+@confirm_action("удаление записей")
 @handle_db_errors
 @check_user_input(DB_COMMANDS["delete"][0])
 def delete_from_table_by_args(command_args: list) -> None:
