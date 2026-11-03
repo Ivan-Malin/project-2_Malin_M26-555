@@ -19,7 +19,7 @@
 from copy import deepcopy
 from typing import Any
 
-from primitive_db.constants import COLUMN_TYPES, DATA_PATH
+from primitive_db.constants import DATA_PATH
 from primitive_db.errors import TableAlreadyExistsError
 from primitive_db.tables import Table, is_columns_propper
 from primitive_db.utils import (
@@ -27,26 +27,6 @@ from primitive_db.utils import (
     get_table_path,
     is_table_structure_free,
 )
-
-
-def parse_column_str(column_str: str) -> tuple[str, str]:
-    """Возвращает колонку из её строкового представления.
-
-    Args:
-        column_str (str): строковое представление колонки.
-
-    Returns:
-        tuple[str, str]: колонка
-
-    """
-    column_name, column_type = column_str.split(":")
-    if column_type not in COLUMN_TYPES:
-        msg = f"Неправильный тип колонки: {column_type}, не один из {COLUMN_TYPES}"
-        raise TypeError(
-            msg,
-        )
-
-    return (column_name, column_type)
 
 
 def create_table(
@@ -180,7 +160,7 @@ def update(
     table_data: Table,
     set_clause: dict[str, Any],
     where_clause: dict[str, Any],
-) -> Table:
+) -> tuple[Table, int]:
     """Обновляет записи в таблице table_data.
 
     Args:
@@ -190,14 +170,15 @@ def update(
 
     Returns:
         Table: изменённая таблица
+        int: количество затронутых записей
 
     """
     _table_data = Table.copy(table_data)
-    _table_data.update(set_clause, where_clause)
-    return _table_data
+    updated_count = _table_data.update(set_clause, where_clause)
+    return _table_data, updated_count
 
 
-def delete(table_data: Table, where_clause: dict[str, Any]) -> Table:
+def delete(table_data: Table, where_clause: dict[str, Any]) -> tuple[Table, int]:
     """Удаляет записи, удовлетворяющие условию.
 
     Args:
@@ -207,8 +188,9 @@ def delete(table_data: Table, where_clause: dict[str, Any]) -> Table:
 
     Returns:
         Table: Обновлённая таблица
+        int: количество затронутых записей
 
     """
     _table_data = Table.copy(table_data)
-    _table_data.delete(where_clause)
-    return _table_data
+    deleted_count = _table_data.delete(where_clause)
+    return _table_data, deleted_count

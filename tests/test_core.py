@@ -318,13 +318,14 @@ def test_update_single_record():
 
     propper_table_data = deepcopy(table_data)
 
-    new_table = update(table_data, set_clause, where_clause)
+    new_table, updated_count = update(table_data, set_clause, where_clause)
 
     # Проверка неизменности исходной таблицы
     assert table_data.data == propper_table_data.data, (
         "update изменил исходную таблицу!"
     )
     assert id(table_data) != id(new_table), "update должен возвращать новую таблицу!"
+    assert updated_count == 1, "Должна быть обновлена 1 запись!"
 
     # Проверка результата
     assert new_table.data[1]["age"] == 31, "Возраст Bob не обновился!"
@@ -342,8 +343,9 @@ def test_update_multiple_records():
     set_clause = {"is_active": True}
     where_clause = {"is_active": False}
 
-    new_table = update(table_data, set_clause, where_clause)
+    new_table, updated_count = update(table_data, set_clause, where_clause)
 
+    assert updated_count == 2, "Должны быть обновлены 2 записи!"
     assert all(r["is_active"] is True for r in new_table.data), (
         "Все записи должны стать активными!"
     )
@@ -368,7 +370,7 @@ def test_delete_single_record():
     where_clause = {"name": "Alice"}
     propper_table_data = deepcopy(table_data)
 
-    new_table = delete(table_data, where_clause)
+    new_table, deleted_count = delete(table_data, where_clause)
 
     # Проверка неизменности исходной таблицы
     assert table_data.data == propper_table_data.data, (
@@ -377,6 +379,7 @@ def test_delete_single_record():
     assert len(table_data.data) == 2, (
         "Количество записей в исходной таблице не должно измениться!"
     )
+    assert deleted_count == 1, "Должна быть удалена 1 запись!"
 
     # Проверка результата
     assert len(new_table.data) == 1, "В новой таблице должна остаться 1 запись!"
@@ -394,8 +397,9 @@ def test_delete_multiple_records():
 
     where_clause = {"is_active": False}
 
-    new_table = delete(table_data, where_clause)
+    new_table, deleted_count = delete(table_data, where_clause)
 
+    assert deleted_count == 2, "Должны быть удалены 2 записи!"
     assert len(new_table.data) == 1, "Должна остаться только 1 активная запись!"
     assert new_table.data[0]["name"] == "Charlie"
 
@@ -405,7 +409,8 @@ def test_delete_no_matches():
     initial_data = [{"ID": 1, "name": "Alice", "age": 25, "is_active": True}]
     table_data = _create_test_table(data=initial_data)
 
-    new_table = delete(table_data, {"name": "Bob"})
+    new_table, deleted_count = delete(table_data, {"name": "Bob"})
 
+    assert deleted_count == 0, "Ничего не должно быть удалено!"
     assert len(new_table.data) == 1, "Записи не должны быть удалены!"
     assert new_table.data[0]["name"] == "Alice"

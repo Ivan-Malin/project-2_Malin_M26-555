@@ -392,7 +392,8 @@ class Table:
         Args:
             metadata (dict): метаданные хранилища таблиц
             table (Table): исходная таблица
-            overwrite (OverwritePolicy): политика перезаписи
+            overwrite (OverwritePolicy): перезаписывать ли таблицу,
+                если она уже существует в БД.
             data_path (str): путь до папки с данными БД.
                 По умолчанию берёт папку data проекта primitive_db.
 

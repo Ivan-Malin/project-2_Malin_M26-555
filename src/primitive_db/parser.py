@@ -2,6 +2,83 @@
 
 from typing import Any
 
+from primitive_db.constants import COLUMN_TYPES, SUPPORTED_COMPARSION_SYMBOLS
+
+
+# Пункт про arg1:type1 arg2:type2 напрямую исходит
+# из корявого ТЗ, в котором create_table
+# имеет синтаксис без запятых...
+def tokenize_user_args(args: list[str]) -> list[str]:
+    """Токенизирует аргументы.
+
+    Объединяет элементы списка по правилам:
+    - Убирает скобки
+    - Выражения вида arg = val в один элемент
+    - Несколько подряд идущих элементов через запятую
+      a, b, c, d = e
+      в один элемент
+    - Так же объединяет в 1 элемент элементы формата
+      arg1:type1 arg2:type2.
+
+    Args:
+        args (list[str]): список токенов после shlex.split
+
+    Returns:
+        list[str]: обработанный список токенов
+
+    """
+    tokens = []
+    i = 0
+
+    while i < len(args):
+        arg = args[i]
+        arg = arg.replace("(", "").replace(")", "")
+        token = ""
+
+        # Обработка выражений с '=': если текущий токен не содержит '=',
+        # но следующий токен это '='
+        if i + 2 < len(args) and args[i + 1] in SUPPORTED_COMPARSION_SYMBOLS:
+            # Объединяем arg = val в один элемент
+            combined = f"{args[i]} {args[i + 1]} {args[i + 2]}"
+            token = combined
+            i += 3
+
+        # Обычный случай - просто добавляем токен
+        else:
+            token = arg
+            i += 1
+
+        # Если предыдущий токен заканчился на ",",
+        # значит мы лишь его часть
+        if (tokens and tokens[-1].endswith(",")) or (
+            tokens and (":" in tokens[-1]) and (":" in token)
+        ):
+            tokens[-1] += f" {token}"
+        else:
+            tokens.append(token)
+
+    return tokens
+
+
+def parse_column_str(column_str: str) -> tuple[str, str]:
+    """Возвращает колонку из её строкового представления.
+
+    Args:
+        column_str (str): строковое представление колонки.
+
+    Returns:
+        tuple[str, str]: колонка
+
+    """
+    column_name, column_type = column_str.split(":")
+    if column_type not in COLUMN_TYPES:
+        msg = f"Неправильный тип колонки: {column_type}, не один из {COLUMN_TYPES}"
+        raise TypeError(
+            msg,
+        )
+
+    return (column_name, column_type)
+
 
 def parse_condition(condition_str: str) -> dict[str, Any]:
     r"""Парсит строку условия (where_clause или set_clause) в словарь.
