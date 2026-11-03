@@ -17,7 +17,7 @@ def get_user_command_line() -> str:
         str: название команды
 
     """
-    return prompt.string(">>> Введите команду: ")
+    return prompt.string("\n>>> Введите команду: ")
 
 
 def get_and_parse_user_args() -> list[str]:
@@ -89,13 +89,11 @@ def print_help() -> None:
 def print_user_input_error() -> None:
     """Пишет ошибку о некорректном вводе для пользователя."""
     print("Некорректный ввод. Повторите свою команду.")
-    print("\n")
 
 
 def print_no_command() -> None:
     """Пишет ошибку об отсутствии команды для пользователя."""
-    print("Ошибка. Команда не реализована.")
-    print("\n")
+    print("Ошибка. Команда не найдена.")
 
 
 def print_err(err: str = "") -> None:
@@ -110,7 +108,6 @@ def print_err(err: str = "") -> None:
         err_str = f"Ошибка: {err}"
 
     print(f"Неправильно заданы аргументы команды. {err_str}")
-    print("\n")
 
 
 def print_success(result: str = "") -> None:
@@ -123,7 +120,6 @@ def print_success(result: str = "") -> None:
     print("Успех. ", end="")
     if result:
         print(f"{result}")
-    print("\n")
 
 
 def print_table(table: Table, records: list[dict] | None = None) -> None:

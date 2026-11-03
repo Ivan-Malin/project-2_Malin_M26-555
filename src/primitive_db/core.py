@@ -119,6 +119,9 @@ def drop_table(metadata: dict, table_name: str, data_path: str = DATA_PATH) -> d
 
     del _metadata["tables"][table_name]
 
+    # Обязательный элемент!!! Т.к. действие происходит в обход класса Table
+    Table.clear_cache()
+
     return _metadata
 
 

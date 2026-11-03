@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from primitive_db.chachers import TableCacher
 from primitive_db.constants import COLUMN_TYPES, DATA_PATH
 from primitive_db.errors import ColumnIsMissingError, TableIsMissingError
 from primitive_db.utils import (
@@ -72,6 +73,8 @@ class Table:
     Хранит метаданные (схему) и данные в памяти, а также предоставляет
     методы для сохранения и загрузки из JSON-файла.
     """
+
+    cacher = TableCacher()
 
     def __init__(
         self,
@@ -205,8 +208,12 @@ class Table:
             new_record[col_name] = validate_value(values[i], col_type)
 
         self.data.append(new_record)
+
+        Table.cacher.clear_cache(self.name)
+
         return new_record
 
+    @cacher.create_cacher
     def select(
         self,
         where_clause: dict[str, Any] | None = None,
@@ -289,6 +296,8 @@ class Table:
                     _record[col_name] = new_value
                 updated_count += 1
 
+        Table.cacher.clear_cache(self.name)
+
         return updated_count
 
     def delete(self, where_clause: dict[str, Any]) -> int:
@@ -312,6 +321,9 @@ class Table:
             for _record in self.data
             if not all(_record.get(k) == v for k, v in where_clause.items())
         ]
+
+        Table.cacher.clear_cache(self.name)
+
         return initial_len - len(self.data)
 
     @classmethod
@@ -479,6 +491,44 @@ class Table:
 
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(serializable_data, f, ensure_ascii=False, indent=4)
+
+    @staticmethod
+    def clear_cache(table_name: str | None = None) -> None:
+        """Очищает кэш вызова select.
+
+        Если не указана таблица, то очищает весь кэш.
+
+        Args:
+            table_name (str | None, optional): название таблицы.
+                По умолчанию None.
+
+        Raises:
+            TypeError: при несоответствии аргументов
+
+        """
+        if table_name is None:
+            Table.cacher.clear_cache()
+        else:
+            if not isinstance(table_name, str):
+                msg = "table_name должен быть str"
+                raise TypeError(msg)
+
+            Table.cacher.clear_cache(table_name)
+
+    def __hash__(self) -> int:
+        """Хеширует класс на основе имени и данных о колонках."""
+        return hash((self.name, self.columns))
+
+    def __eq__(self, other: "Table") -> bool:
+        """Сравнивает класс на основе имени и данных о колонках."""
+        if not isinstance(other, Table):
+            msg = (
+                f'Некорректно сравнивать "{type(self).__name__}"'
+                f'с классом "{type(other).__name__}".'
+            )
+            raise TypeError(msg)
+
+        return (self.name, self.columns) == (other.name, other.columns)
 
     def __repr__(self) -> str:
         """Возвращает краткое представление класса Table.

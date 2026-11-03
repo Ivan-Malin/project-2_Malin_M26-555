@@ -9,7 +9,12 @@ from primitive_db.core import (
     select,
     update,
 )
-from primitive_db.decorators import check_user_input, confirm_action, handle_db_errors
+from primitive_db.decorators import (
+    check_user_input,
+    confirm_action,
+    handle_db_errors,
+    log_time,
+)
 from primitive_db.parser import (
     parse_column_str,
     parse_insert_values,
@@ -95,6 +100,7 @@ def list_tables_by_args(command_args: list) -> None:
     print(f"Список таблиц: {', '.join(table_names)}")
 
 
+@log_time("insert")
 @handle_db_errors
 @check_user_input(DB_COMMANDS["insert"][0])
 def insert_into_table_by_args(command_args: list) -> None:
@@ -123,6 +129,7 @@ def insert_into_table_by_args(command_args: list) -> None:
     print_success(f"Данные успешно добавлены в таблицу {table_name}.")
 
 
+@log_time("select")
 @handle_db_errors
 @check_user_input(DB_COMMANDS["select"][0])
 def select_from_table_by_args(command_args: list) -> None:

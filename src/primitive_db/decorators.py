@@ -11,11 +11,13 @@
 # Именно поэтому декораторы применены к engine.py,
 # точке входа cli, где вывод в терминал подразумевается по умолчанию
 # и является единственной опцией.
+# Не говоря уже про log_time и confirm_action, что нужны для cli...
 #
 # Errors should never pass silently.
 # Unless explicitly silenced.
 # - The Zen of Python.
 
+import time
 from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
 from json import JSONDecodeError
@@ -143,6 +145,32 @@ def confirm_action(
             if ask_confirmation(action_name):
                 return func(*args, **kwargs)
             return None
+
+        return wrapper
+
+    return decorator
+
+
+# function_short_name был выбран только по тому, что декоратор
+# может быть применен к обёртке функции, а не к самой измеряемой
+# функции, при этом временем парсинга аргументов в обёртке
+# можно принебречь.
+def log_time(
+    function_short_name: str,
+) -> Callable[[Callable[P, R]], Callable[P, R | None]]:
+    """Замеряет время действия функции и выводит на экран."""
+
+    def decorator(func: Callable[P, R]) -> Callable[P, R | None]:
+        @wraps(func)
+        def wrapper(
+            *args: P.args,
+            **kwargs: P.kwargs,
+        ) -> R:
+            old_t = time.monotonic()
+            result = func(*args, **kwargs)
+            dt = time.monotonic() - old_t
+            print(f'Функция "{function_short_name}" выполнилась за {dt:.3f} секунду')
+            return result
 
         return wrapper
 

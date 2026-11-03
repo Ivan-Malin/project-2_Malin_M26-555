@@ -90,5 +90,7 @@ GENERAL_COMMANDS = {
     "help": ({("help",)}, "справочная информация."),
 }
 
+# Символы, которые не являются частью ключевого слова
 SPECIAL_SYMBOLS_IN_USER_ARGS = set("\"'()<>=.:")
+# Символы сравнения, которые поддерживает WHERE
 SUPPORTED_COMPARSION_SYMBOLS = set("=")

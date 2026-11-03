@@ -12,6 +12,7 @@ from primitive_db.constants import (
 )
 from primitive_db.engine import run
 from primitive_db.utils import load_metadata, save_metadata
+from primitive_db.tables import Table
 
 # Замечание проверяющему - часть тестовых файлов были отданы на откуп Qwen'у,
 # т.к. тесты от нейросети (под пристальным ревью) лучше, чем никаких тестов вообще.
@@ -29,6 +30,9 @@ def _clean_db_state():
 
     # Сбрасываем метаданные до пустого состояния
     save_metadata(metadata_file, DEFAULT_METADATA_CONTENT)
+
+    # Очищаем кэш select
+    Table.clear_cache()
 
 
 def _run_with_commands(commands: list[str], monkeypatch):
@@ -72,7 +76,7 @@ def test_run_invalid_command(capsys, monkeypatch):
     _run_with_commands(commands, monkeypatch)
 
     captured = capsys.readouterr()
-    assert "не реализована" in captured.out.lower()
+    assert "не найдена" in captured.out.lower()
 
 
 def test_run_create_table_error_handling(capsys, monkeypatch):
