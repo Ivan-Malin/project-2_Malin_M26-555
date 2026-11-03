@@ -112,7 +112,8 @@ def handle_db_errors[**P, R](func: Callable[P, R]) -> Callable[P, R | None]:
         except FileNotFoundError:
             print_err(
                 "Ошибка: Файл данных не найден. "
-                "Возможно, база данных не инициализирована.",
+                "Возможно, база данных не инициализирована "
+                "или структура БД битая.",
             )
         except JSONDecodeError as e:
             print_err(f"Файлы БД повреждены. {e}")
@@ -144,6 +145,7 @@ def confirm_action(
 
             if ask_confirmation(action_name):
                 return func(*args, **kwargs)
+            print_err(f"Операция {action_name} отменена.")
             return None
 
         return wrapper
